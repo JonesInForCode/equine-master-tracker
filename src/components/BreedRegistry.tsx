@@ -11,32 +11,18 @@ export default function BreedRegistry() {
   const [temperament, setTemperament] = useState('');
   const [wildLocation, setWildLocation] = useState('');
   const [baseValue, setBaseValue] = useState<number | ''>('');
-  const [baseStatsStr, setBaseStatsStr] = useState('');
 
   const [isAdding, setIsAdding] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const baseStats: Record<string, number> = {};
-      // Parse key-value pairs separated by commas, e.g., "speed: 5, agility: 4"
-      if (baseStatsStr.trim()) {
-        const parts = baseStatsStr.split(',');
-        for (const part of parts) {
-          const [key, val] = part.split(':').map((s) => s.trim());
-          if (key && val && !isNaN(Number(val))) {
-            baseStats[key] = Number(val);
-          }
-        }
-      }
-
       await db.breeds.add({
         name,
         rarity,
         temperament,
         wildLocation,
         baseValue: Number(baseValue) || 0,
-        baseStats,
       });
 
       // Reset form
@@ -45,7 +31,6 @@ export default function BreedRegistry() {
       setTemperament('');
       setWildLocation('');
       setBaseValue('');
-      setBaseStatsStr('');
       setIsAdding(false);
     } catch (error) {
       console.error('Failed to add breed', error);
@@ -127,17 +112,7 @@ export default function BreedRegistry() {
                   placeholder="e.g., 500"
                 />
               </div>
-              <div>
-                <label className="block text-sm font-bold mb-1">Base Stats (Optional)</label>
-                <input
-                  type="text"
-                  value={baseStatsStr}
-                  onChange={(e) => setBaseStatsStr(e.target.value)}
-                  className="w-full p-2 border border-[#d3cbb8] rounded bg-transparent focus:outline-none focus:ring-2 focus:ring-[#8b7355]/30"
-                  placeholder="e.g., speed: 5, agility: 4"
-                />
-                <p className="text-xs text-gray-500 mt-1">Format: attr: value, attr: value</p>
-              </div>
+
             </div>
             <div className="flex justify-end">
               <button
@@ -171,19 +146,7 @@ export default function BreedRegistry() {
               <p><span className="font-bold">Location:</span> {breed.wildLocation || 'Unknown'}</p>
               <p><span className="font-bold">Base Value:</span> ${breed.baseValue}</p>
 
-              {Object.keys(breed.baseStats).length > 0 && (
-                <div className="mt-4 pt-4 border-t border-[#d3cbb8]/50">
-                  <span className="font-bold block mb-1">Base Stats:</span>
-                  <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-                    {Object.entries(breed.baseStats).map(([key, val]) => (
-                      <div key={key} className="flex justify-between">
-                        <span className="capitalize">{key}</span>
-                        <span className="font-mono">{val}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+
             </div>
           </div>
         ))}

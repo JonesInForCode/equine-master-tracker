@@ -7,18 +7,34 @@ export interface BreedTemplate {
   temperament: string;
   wildLocation: string;
   baseValue: number;
-  baseStats: Record<string, number>;
 }
 
 export interface IndividualHorse {
   id?: number;
   breedId: number;
   name: string;
+  gender: 'Stallion' | 'Mare' | 'Gelding' | '';
+  personality: string;
+  genes: string;
   currentXP: number;
   isTrained: boolean;
+  baseStats: Record<string, number>;
+  finalStats: Record<string, number>;
   customStats: Record<string, number>;
   notes: string;
   status: 'Stabled' | 'Training' | 'Sold';
+}
+
+export interface HorseOrder {
+  id?: number;
+  customerName: string;
+  orderType: 'Full Order' | 'Training Only';
+  color: string;
+  gender: string;
+  personality: string;
+  notes: string;
+  status: 'Pending' | 'In Progress' | 'Completed';
+  date: Date;
 }
 
 export interface SaleRecord {
@@ -43,6 +59,7 @@ export class StableDatabase extends Dexie {
   horses!: Table<IndividualHorse>;
   sales!: Table<SaleRecord>;
   items!: Table<CraftableItem>;
+  orders!: Table<HorseOrder>;
 
   constructor() {
     super('RedMStableDB');
@@ -51,6 +68,22 @@ export class StableDatabase extends Dexie {
       horses: '++id, breedId, status',
       sales: '++id, horseId, buyerName',
       items: '++id, name, isCrafted'
+    });
+
+    this.version(2).stores({
+      breeds: '++id, name, rarity',
+      horses: '++id, breedId, status, gender, personality',
+      sales: '++id, horseId, buyerName',
+      items: '++id, name, isCrafted',
+      orders: '++id, customerName, status'
+    }).upgrade(tx => {
+      return tx.table('horses').toCollection().modify(horse => {
+        if (horse.gender === undefined) horse.gender = '';
+        if (horse.personality === undefined) horse.personality = '';
+        if (horse.genes === undefined) horse.genes = '';
+        if (horse.baseStats === undefined) horse.baseStats = {};
+        if (horse.finalStats === undefined) horse.finalStats = {};
+      });
     });
   }
 }

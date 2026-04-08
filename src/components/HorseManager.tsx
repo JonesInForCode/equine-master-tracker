@@ -10,6 +10,10 @@ export default function HorseManager() {
   const [isAdding, setIsAdding] = useState(false);
   const [name, setName] = useState('');
   const [breedId, setBreedId] = useState<number | ''>('');
+  const [gender, setGender] = useState<'Stallion' | 'Mare' | 'Gelding' | ''>('');
+  const [personality, setPersonality] = useState('');
+  const [genes, setGenes] = useState('');
+  const [baseStatsStr, setBaseStatsStr] = useState('');
   const [notes, setNotes] = useState('');
 
   const [sellModalHorseId, setSellModalHorseId] = useState<number | null>(null);
@@ -24,18 +28,38 @@ export default function HorseManager() {
       const selectedBreed = breeds?.find((b: any) => b.id === Number(breedId));
       if (!selectedBreed) return;
 
+      const baseStats: Record<string, number> = {};
+      if (baseStatsStr.trim()) {
+        const parts = baseStatsStr.split(',');
+        for (const part of parts) {
+          const [key, val] = part.split(':').map((s) => s.trim());
+          if (key && val && !isNaN(Number(val))) {
+            baseStats[key] = Number(val);
+          }
+        }
+      }
+
       await db.horses.add({
         breedId: Number(breedId),
         name,
+        gender: gender as 'Stallion' | 'Mare' | 'Gelding' | '',
+        personality,
+        genes,
         currentXP: 0,
         isTrained: false,
-        customStats: { ...selectedBreed.baseStats }, // copy base stats initially
+        baseStats,
+        finalStats: {},
+        customStats: {},
         notes,
         status: 'Stabled',
       });
 
-      setName('');
       setBreedId('');
+      setName('');
+      setGender('');
+      setPersonality('');
+      setGenes('');
+      setBaseStatsStr('');
       setNotes('');
       setIsAdding(false);
     } catch (error) {
@@ -52,6 +76,24 @@ export default function HorseManager() {
       await db.horses.update(id, { currentXP: finalXP, isTrained, status: finalXP > 0 && finalXP < 2000 ? 'Training' : 'Stabled' });
     } catch (error) {
       console.error('Failed to update XP', error);
+    }
+  };
+
+  const handleUpdateFinalStats = async (id: number, statsStr: string) => {
+    try {
+      const finalStats: Record<string, number> = {};
+      if (statsStr.trim()) {
+        const parts = statsStr.split(',');
+        for (const part of parts) {
+          const [key, val] = part.split(':').map((s) => s.trim());
+          if (key && val && !isNaN(Number(val))) {
+            finalStats[key] = Number(val);
+          }
+        }
+      }
+      await db.horses.update(id, { finalStats });
+    } catch (error) {
+      console.error('Failed to update final stats', error);
     }
   };
 
@@ -148,6 +190,49 @@ export default function HorseManager() {
                   ))}
                 </select>
               </div>
+              <div>
+                <label className="block text-sm font-bold mb-1">Gender</label>
+                <select
+                  value={gender}
+                  onChange={(e) => setGender(e.target.value as any)}
+                  className="w-full p-2 border border-[#d3cbb8] rounded bg-transparent focus:outline-none focus:ring-2 focus:ring-[#8b7355]/30"
+                >
+                  <option value="" disabled>Select Gender</option>
+                  <option value="Stallion">Stallion</option>
+                  <option value="Mare">Mare</option>
+                  <option value="Gelding">Gelding</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-bold mb-1">Personality</label>
+                <input
+                  type="text"
+                  value={personality}
+                  onChange={(e) => setPersonality(e.target.value)}
+                  className="w-full p-2 border border-[#d3cbb8] rounded bg-transparent focus:outline-none focus:ring-2 focus:ring-[#8b7355]/30"
+                  placeholder="e.g., Brave, Spooked"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold mb-1">Genes</label>
+                <input
+                  type="text"
+                  value={genes}
+                  onChange={(e) => setGenes(e.target.value)}
+                  className="w-full p-2 border border-[#d3cbb8] rounded bg-transparent focus:outline-none focus:ring-2 focus:ring-[#8b7355]/30"
+                  placeholder="e.g., Fast Learner"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold mb-1">Base Stats</label>
+                <input
+                  type="text"
+                  value={baseStatsStr}
+                  onChange={(e) => setBaseStatsStr(e.target.value)}
+                  className="w-full p-2 border border-[#d3cbb8] rounded bg-transparent focus:outline-none focus:ring-2 focus:ring-[#8b7355]/30"
+                  placeholder="e.g., speed: 5, agility: 4"
+                />
+              </div>
               <div className="md:col-span-2">
                 <label className="block text-sm font-bold mb-1">Initial Notes</label>
                 <textarea
@@ -232,6 +317,11 @@ export default function HorseManager() {
                 <div>
                   <h3 className="text-2xl font-bold ink-text">{horse.name}</h3>
                   <p className="text-sm italic">{breed?.name || 'Unknown Breed'}</p>
+                  <p className="text-xs mt-1 text-gray-600">
+                    {horse.gender && <span className="mr-2"><b>Gender:</b> {horse.gender}</span>}
+                    {horse.personality && <span className="mr-2"><b>Personality:</b> {horse.personality}</span>}
+                    {horse.genes && <span><b>Genes:</b> {horse.genes}</span>}
+                  </p>
                 </div>
                 <div className="text-right">
                   <span className="block text-lg font-bold text-green-700">${suggestedPrice}</span>
@@ -255,6 +345,49 @@ export default function HorseManager() {
                     className="w-full accent-[#8b7355]"
                   />
                   {horse.isTrained && <span className="text-xs font-bold text-green-600">Fully Trained (+Bundle Fee Applied)</span>}
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 text-sm mt-2">
+                  <div>
+                    <span className="font-bold block mb-1">Base Stats:</span>
+                    {horse.baseStats && Object.keys(horse.baseStats).length > 0 ? (
+                      <div className="space-y-1">
+                        {Object.entries(horse.baseStats).map(([key, val]) => (
+                          <div key={key} className="flex justify-between">
+                            <span className="capitalize">{key}</span>
+                            <span className="font-mono">{val as number}</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="text-gray-500 italic">None</span>
+                    )}
+                  </div>
+                  <div>
+                    <span className="font-bold block mb-1">Final Stats:</span>
+                    {horse.finalStats && Object.keys(horse.finalStats).length > 0 ? (
+                      <div className="space-y-1 mb-2">
+                        {Object.entries(horse.finalStats).map(([key, val]) => (
+                          <div key={key} className="flex justify-between">
+                            <span className="capitalize">{key}</span>
+                            <span className="font-mono">{val as number}</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="text-gray-500 italic mb-2 block">None</span>
+                    )}
+
+                    <div className="flex gap-2">
+                       <input
+                        type="text"
+                        placeholder="attr: val, ..."
+                        className="w-full p-1 text-xs border border-[#d3cbb8] rounded bg-transparent focus:outline-none"
+                        onBlur={(e) => handleUpdateFinalStats(horse.id!, e.target.value)}
+                        defaultValue={horse.finalStats ? Object.entries(horse.finalStats).map(([k, v]) => `${k}: ${v}`).join(', ') : ''}
+                      />
+                    </div>
+                  </div>
                 </div>
 
                 {horse.notes && (
