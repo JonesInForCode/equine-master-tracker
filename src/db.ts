@@ -23,6 +23,9 @@ export interface IndividualHorse {
   customStats: Record<string, number>;
   notes: string;
   status: 'Stabled' | 'Training' | 'Sold';
+  acquisitionMethod: 'Wild Caught' | 'Bought' | 'Transferred' | '';
+  purchasePrice: number;
+  trainingFee: number;
 }
 
 export interface HorseOrder {
@@ -83,6 +86,20 @@ export class StableDatabase extends Dexie {
         if (horse.genes === undefined) horse.genes = '';
         if (horse.baseStats === undefined) horse.baseStats = {};
         if (horse.finalStats === undefined) horse.finalStats = {};
+      });
+    });
+
+    this.version(3).stores({
+      breeds: '++id, name, rarity',
+      horses: '++id, breedId, status, gender, personality, acquisitionMethod',
+      sales: '++id, horseId, buyerName',
+      items: '++id, name, isCrafted',
+      orders: '++id, customerName, status'
+    }).upgrade(tx => {
+      return tx.table('horses').toCollection().modify(horse => {
+        if (horse.acquisitionMethod === undefined) horse.acquisitionMethod = 'Wild Caught';
+        if (horse.purchasePrice === undefined) horse.purchasePrice = 200;
+        if (horse.trainingFee === undefined) horse.trainingFee = 200;
       });
     });
   }

@@ -10,7 +10,6 @@ export default function BreedRegistry() {
   const [rarity, setRarity] = useState<BreedTemplate['rarity']>('Common');
   const [temperament, setTemperament] = useState('');
   const [wildLocation, setWildLocation] = useState('');
-  const [baseValue, setBaseValue] = useState<number | ''>('');
 
   const [isAdding, setIsAdding] = useState(false);
 
@@ -22,7 +21,7 @@ export default function BreedRegistry() {
         rarity,
         temperament,
         wildLocation,
-        baseValue: Number(baseValue) || 0,
+        baseValue: 0,
       });
 
       // Reset form
@@ -30,7 +29,6 @@ export default function BreedRegistry() {
       setRarity('Common');
       setTemperament('');
       setWildLocation('');
-      setBaseValue('');
       setIsAdding(false);
     } catch (error) {
       console.error('Failed to add breed', error);
@@ -100,18 +98,6 @@ export default function BreedRegistry() {
                   placeholder="e.g., Heartlands"
                 />
               </div>
-              <div>
-                <label className="block text-sm font-bold mb-1">Base Value ($)</label>
-                <input
-                  type="number"
-                  required
-                  min="0"
-                  value={baseValue}
-                  onChange={(e) => setBaseValue(Number(e.target.value))}
-                  className="w-full p-2 border border-[#d3cbb8] rounded bg-transparent focus:outline-none focus:ring-2 focus:ring-[#8b7355]/30"
-                  placeholder="e.g., 500"
-                />
-              </div>
 
             </div>
             <div className="flex justify-end">
@@ -144,7 +130,6 @@ export default function BreedRegistry() {
             <div className="space-y-2 flex-1 text-sm">
               <p><span className="font-bold">Temperament:</span> {breed.temperament || 'Unknown'}</p>
               <p><span className="font-bold">Location:</span> {breed.wildLocation || 'Unknown'}</p>
-              <p><span className="font-bold">Base Value:</span> ${breed.baseValue}</p>
 
 
             </div>
