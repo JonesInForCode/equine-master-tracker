@@ -1,0 +1,95 @@
+This comprehensive design document outlines a **Unified Stable & Crafting Management Suite** for RedM. It transitions the previous "Manufacturer" logic into an **Asset Brokerage** model, specifically designed for high-value horse training and sales, while retaining a modular crafting system for supplies.
+## **Project Overview: The Equine Ledger & Storefront**
+**Stack:** React, TypeScript, Tailwind CSS, Dexie.js (IndexedDB).
+**Primary Goal:** Manage a "Pokedex" of horse breeds, track individual horse assets/training, and log sales/profitability.
+## **1. Data Schema (Dexie.js)**
+```typescript
+// db.ts
+import Dexie, { Table } from 'dexie';
+
+export interface BreedTemplate {
+  id?: number;
+  name: string;
+  rarity: 'Common' | 'Uncommon' | 'Rare' | 'Legendary';
+  temperament: string;
+  wildLocation: string;
+  baseValue: number;
+  baseStats: Record<string, number>; // e.g., { speed: 5, agility: 4 }
+}
+
+export interface IndividualHorse {
+  id?: number;
+  breedId: number;      // FK to BreedTemplate
+  name: string;
+  currentXP: number;    // 0 to 2000
+  isTrained: boolean;   // Becomes true at 2000 XP
+  customStats: Record<string, number>;
+  notes: string;
+  status: 'Stabled' | 'Training' | 'Sold';
+}
+
+export interface SaleRecord {
+  id?: number;
+  horseId: number;
+  buyerName: string;
+  salePrice: number;
+  date: Date;
+}
+
+// Re-using Crafting Schema for Stable Supplies (Hay, Tack, Medicine)
+export interface CraftableItem {
+  id?: number;
+  name: string;
+  isCrafted: boolean;
+  baseCost: number;
+  yieldQty: number;
+}
+
+export class StableDatabase extends Dexie {
+  breeds!: Table<BreedTemplate>;
+  horses!: Table<IndividualHorse>;
+  sales!: Table<SaleRecord>;
+  items!: Table<CraftableItem>;
+
+  constructor() {
+    super('RedMStableDB');
+    this.version(1).stores({
+      breeds: '++id, name, rarity',
+      horses: '++id, breedId, status',
+      sales: '++id, horseId, buyerName',
+      items: '++id, name, isCrafted'
+    });
+  }
+}
+
+```
+## **2. Modular Feature Modules**
+### **A. The Breed Wiki (The "Scout" Tool)**
+ * **Template Creator:** A form to define "Base" horses.
+ * **Stat Profiles:** Uses a key-value pair input (e.g., Attribute Name | Value) to allow for modular stat tracking across different server versions.
+ * **Discovery Log:** A searchable list to find which breeds spawn in which territories and their associated rarity.
+### **B. The Active Stable (Individual Profiles)**
+ * **Asset Inheritance:** When adding a new horse, selecting a "Breed" auto-fills the base stats and rarity.
+ * **The XP Tracker:** A manual progress slider (0–2000).
+ * **Value Calculator:** * Base\ Value (from Breed) + Rarity\ Premium + Training\ Bundle\ Fee (if XP = 2000).
+ * **Stat Drifting:** Ability to override base stats if a specific horse is an outlier or has unique "coat" bonuses.
+### **C. The Sales Ledger (CRM)**
+ * **Transaction Log:** When a horse is marked "Sold," the app moves it to this ledger.
+ * **Profit Analysis:** Calculates total gain based on the difference between the acquisition cost (if any) and final sale price.
+## **3. Pricing Logic & Workflow**
+ 1. **Define Breed:** Create "Mustang" (Rare, $500 Base).
+ 2. **Add Horse:** Create "Spirit," linked to Mustang.
+ 3. **Update Status:** Log XP as you train. At 2000 XP, the "Trained" flag adds your pre-set $200 "Bundle Fee" to the suggested price.
+ 4. **Finalize Sale:** Input the buyer's name. The app removes the horse from "Active Stable" and puts it in "Sales Records."
+## **4. UI/UX Requirements**
+ * **Horse "Trading Cards":** Visual grid showing horse name, breed icon, XP bar, and current market value.
+ * **The "Blueprint" Toggle:** A view to switch between managing your **Breeds** (The Library) and your **Horses** (The Inventory).
+ * **Data Portability:** JSON Export/Import buttons to ensure data can be moved between devices or backed up before clearing browser cache.
+## **5. Prompt for Coding Agent (Jules)**
+> "Build a React + TypeScript application for a RedM Horse Trainer. Use Dexie.js for local storage (no backend).
+>  1. Create a **Breed Registry** for defining horse templates (name, rarity, base stats, location).
+>  2. Create an **Individual Horse Manager** where users can add specific horses based on those templates, track XP up to 2000, and manage unique notes.
+>  3. Implement a **Sales Ledger** to record buyer names and final sale prices.
+>  4. Include a **Crafting Module** for stable supplies using a recursive recipe builder.
+>  5. The UI should be a clean, mobile-responsive dashboard using Tailwind CSS with JSON export/import functionality for data persistence."
+> 
