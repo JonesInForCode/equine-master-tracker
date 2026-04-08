@@ -8,12 +8,28 @@ export default function HorseManager() {
   const activeHorses = useLiveQuery(() => db.horses.where('status').notEqual('Sold').toArray());
 
   const [isAdding, setIsAdding] = useState(false);
+
+  // Edit state
+  const [editModalHorseId, setEditModalHorseId] = useState<number | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editGender, setEditGender] = useState('');
+  const [editPersonality, setEditPersonality] = useState('');
+  const [editGenes, setEditGenes] = useState('');
+  const [editBaseStatsStr, setEditBaseStatsStr] = useState('');
+  const [editFinalStatsStr, setEditFinalStatsStr] = useState('');
+  const [editNotes, setEditNotes] = useState('');
+  const [editAcquisitionMethod, setEditAcquisitionMethod] = useState<'Wild Caught' | 'Bought' | 'Transferred' | ''>('Wild Caught');
+  const [editPurchasePrice, setEditPurchasePrice] = useState<number>(200);
+  const [editTrainingFee, setEditTrainingFee] = useState<number>(200);
   const [name, setName] = useState('');
   const [breedId, setBreedId] = useState<number | ''>('');
   const [gender, setGender] = useState<'Stallion' | 'Mare' | 'Gelding' | ''>('');
   const [personality, setPersonality] = useState('');
   const [genes, setGenes] = useState('');
   const [baseStatsStr, setBaseStatsStr] = useState('');
+  const [acquisitionMethod, setAcquisitionMethod] = useState<'Wild Caught' | 'Bought' | 'Transferred' | ''>('Wild Caught');
+  const [purchasePrice, setPurchasePrice] = useState<number>(200);
+  const [trainingFee, setTrainingFee] = useState<number>(200);
   const [notes, setNotes] = useState('');
 
   const [sellModalHorseId, setSellModalHorseId] = useState<number | null>(null);
@@ -52,6 +68,9 @@ export default function HorseManager() {
         customStats: {},
         notes,
         status: 'Stabled',
+        acquisitionMethod,
+        purchasePrice: Number(purchasePrice) || 0,
+        trainingFee: Number(trainingFee) || 0
       });
 
       setBreedId('');
@@ -61,6 +80,9 @@ export default function HorseManager() {
       setGenes('');
       setBaseStatsStr('');
       setNotes('');
+      setAcquisitionMethod('Wild Caught');
+      setPurchasePrice(200);
+      setTrainingFee(200);
       setIsAdding(false);
     } catch (error) {
       console.error('Failed to add horse', error);
@@ -97,6 +119,55 @@ export default function HorseManager() {
     }
   };
 
+
+  const openEditModal = (horse: any) => {
+    setEditModalHorseId(horse.id!);
+    setEditName(horse.name || '');
+    setEditGender(horse.gender || '');
+    setEditPersonality(horse.personality || '');
+    setEditGenes(horse.genes || '');
+    setEditBaseStatsStr(horse.baseStats ? Object.entries(horse.baseStats).map(([k, v]) => `${k}: ${v}`).join(', ') : '');
+    setEditFinalStatsStr(horse.finalStats ? Object.entries(horse.finalStats).map(([k, v]) => `${k}: ${v}`).join(', ') : '');
+    setEditNotes(horse.notes || '');
+    setEditAcquisitionMethod(horse.acquisitionMethod || 'Wild Caught');
+    setEditPurchasePrice(horse.purchasePrice ?? 200);
+    setEditTrainingFee(horse.trainingFee ?? 200);
+  };
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editModalHorseId) return;
+    try {
+      const parsedBaseStats = editBaseStatsStr.split(',').reduce((acc: any, curr) => {
+        const [key, val] = curr.split(':').map(s => s.trim());
+        if (key && val) acc[key] = Number(val);
+        return acc;
+      }, {});
+      const parsedFinalStats = editFinalStatsStr.split(',').reduce((acc: any, curr) => {
+        const [key, val] = curr.split(':').map(s => s.trim());
+        if (key && val) acc[key] = Number(val);
+        return acc;
+      }, {});
+
+      await db.horses.update(editModalHorseId, {
+        name: editName,
+        gender: editGender as any,
+        personality: editPersonality,
+        genes: editGenes,
+        baseStats: parsedBaseStats,
+        finalStats: parsedFinalStats,
+        notes: editNotes,
+        acquisitionMethod: editAcquisitionMethod,
+        purchasePrice: Number(editPurchasePrice) || 0,
+        trainingFee: Number(editTrainingFee) || 0
+      });
+      setEditModalHorseId(null);
+    } catch (error) {
+      console.error('Failed to update horse', error);
+      alert('Failed to update horse. Check console for details.');
+    }
+  };
+
   const handleSell = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!sellModalHorseId || salePrice === '') return;
@@ -121,11 +192,11 @@ export default function HorseManager() {
     }
   };
 
-  const getSuggestedPrice = (horse: { breedId: number; currentXP: number }) => {
+  const getSuggestedPrice = (horse: { breedId: number; currentXP: number; purchasePrice?: number; trainingFee?: number }) => {
     const breed = breeds?.find((b: any) => b.id === horse.breedId);
     if (!breed) return 0;
 
-    let price = breed.baseValue;
+    let price = horse.purchasePrice || 0;
 
     // Rarity Premium
     if (breed.rarity === 'Legendary') price += 1000;
@@ -134,7 +205,7 @@ export default function HorseManager() {
 
     // Training Bundle Fee
     if (horse.currentXP >= 2000) {
-      price += 200;
+      price += (horse.trainingFee || 0);
     }
 
     return price;
@@ -220,7 +291,41 @@ export default function HorseManager() {
                   value={genes}
                   onChange={(e) => setGenes(e.target.value)}
                   className="w-full p-2 border border-[#d3cbb8] rounded bg-transparent focus:outline-none focus:ring-2 focus:ring-[#8b7355]/30"
-                  placeholder="e.g., Fast Learner"
+                  placeholder="e.g., Base Coat Genes: ee, E-, BLK"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold mb-1">Acquisition Method</label>
+                <select
+                  value={acquisitionMethod}
+                  onChange={(e) => setAcquisitionMethod(e.target.value as any)}
+                  className="w-full p-2 border border-[#d3cbb8] rounded bg-transparent focus:outline-none focus:ring-2 focus:ring-[#8b7355]/30"
+                >
+                  <option value="Wild Caught">Wild Caught</option>
+                  <option value="Bought">Bought</option>
+                  <option value="Transferred">Transferred</option>
+                  <option value="">Unknown</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-bold mb-1">Base Value / Purchase Price ($)</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={purchasePrice}
+                  onChange={(e) => setPurchasePrice(Number(e.target.value))}
+                  className="w-full p-2 border border-[#d3cbb8] rounded bg-transparent focus:outline-none focus:ring-2 focus:ring-[#8b7355]/30"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold mb-1">Training Fee ($)</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={trainingFee}
+                  onChange={(e) => setTrainingFee(Number(e.target.value))}
+                  className="w-full p-2 border border-[#d3cbb8] rounded bg-transparent focus:outline-none focus:ring-2 focus:ring-[#8b7355]/30"
                 />
               </div>
               <div>
@@ -253,6 +358,136 @@ export default function HorseManager() {
               </button>
             </div>
           </form>
+        </div>
+      )}
+
+
+      {/* Edit Modal */}
+      {editModalHorseId && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 overflow-y-auto">
+          <div className="aged-paper p-6 rounded-lg w-full max-w-2xl my-8">
+            <h3 className="text-2xl font-bold mb-4 ink-text">Edit Horse</h3>
+            <form onSubmit={handleEditSubmit} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-bold mb-1">Name</label>
+                  <input
+                    type="text"
+                    required
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    className="w-full p-2 border border-[#d3cbb8] rounded bg-transparent focus:outline-none focus:ring-2 focus:ring-[#8b7355]/30"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold mb-1">Gender</label>
+                  <select
+                    value={editGender}
+                    onChange={(e) => setEditGender(e.target.value)}
+                    className="w-full p-2 border border-[#d3cbb8] rounded bg-transparent focus:outline-none focus:ring-2 focus:ring-[#8b7355]/30"
+                  >
+                    <option value="">Unknown</option>
+                    <option value="Stallion">Stallion</option>
+                    <option value="Mare">Mare</option>
+                    <option value="Gelding">Gelding</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-bold mb-1">Personality</label>
+                  <input
+                    type="text"
+                    value={editPersonality}
+                    onChange={(e) => setEditPersonality(e.target.value)}
+                    className="w-full p-2 border border-[#d3cbb8] rounded bg-transparent focus:outline-none focus:ring-2 focus:ring-[#8b7355]/30"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold mb-1">Genes</label>
+                  <input
+                    type="text"
+                    value={editGenes}
+                    onChange={(e) => setEditGenes(e.target.value)}
+                    className="w-full p-2 border border-[#d3cbb8] rounded bg-transparent focus:outline-none focus:ring-2 focus:ring-[#8b7355]/30"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold mb-1">Acquisition Method</label>
+                  <select
+                    value={editAcquisitionMethod}
+                    onChange={(e) => setEditAcquisitionMethod(e.target.value as any)}
+                    className="w-full p-2 border border-[#d3cbb8] rounded bg-transparent focus:outline-none focus:ring-2 focus:ring-[#8b7355]/30"
+                  >
+                    <option value="Wild Caught">Wild Caught</option>
+                    <option value="Bought">Bought</option>
+                    <option value="Transferred">Transferred</option>
+                    <option value="">Unknown</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-bold mb-1">Base Value / Purchase Price ($)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={editPurchasePrice}
+                    onChange={(e) => setEditPurchasePrice(Number(e.target.value))}
+                    className="w-full p-2 border border-[#d3cbb8] rounded bg-transparent focus:outline-none focus:ring-2 focus:ring-[#8b7355]/30"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold mb-1">Training Fee ($)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={editTrainingFee}
+                    onChange={(e) => setEditTrainingFee(Number(e.target.value))}
+                    className="w-full p-2 border border-[#d3cbb8] rounded bg-transparent focus:outline-none focus:ring-2 focus:ring-[#8b7355]/30"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold mb-1">Base Stats</label>
+                  <input
+                    type="text"
+                    value={editBaseStatsStr}
+                    onChange={(e) => setEditBaseStatsStr(e.target.value)}
+                    className="w-full p-2 border border-[#d3cbb8] rounded bg-transparent focus:outline-none focus:ring-2 focus:ring-[#8b7355]/30"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold mb-1">Final Stats</label>
+                  <input
+                    type="text"
+                    value={editFinalStatsStr}
+                    onChange={(e) => setEditFinalStatsStr(e.target.value)}
+                    className="w-full p-2 border border-[#d3cbb8] rounded bg-transparent focus:outline-none focus:ring-2 focus:ring-[#8b7355]/30"
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-bold mb-1">Notes</label>
+                  <textarea
+                    value={editNotes}
+                    onChange={(e) => setEditNotes(e.target.value)}
+                    className="w-full p-2 border border-[#d3cbb8] rounded bg-transparent focus:outline-none focus:ring-2 focus:ring-[#8b7355]/30"
+                    rows={3}
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end space-x-2 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setEditModalHorseId(null)}
+                  className="px-4 py-2 border border-[#d3cbb8] rounded hover:bg-[#d3cbb8]/30 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="bg-[#2c3e50] text-white px-4 py-2 rounded hover:bg-[#1a252f] transition-colors font-bold"
+                >
+                  Save Changes
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 
@@ -398,7 +633,13 @@ export default function HorseManager() {
                 )}
               </div>
 
-              <div className="mt-6 pt-4 border-t border-[#d3cbb8] flex justify-end">
+              <div className="mt-6 pt-4 border-t border-[#d3cbb8] flex justify-end space-x-2">
+                <button
+                  onClick={() => openEditModal(horse)}
+                  className="flex items-center space-x-2 bg-[#d3cbb8] text-[#2c3e50] px-4 py-2 rounded hover:bg-[#c2baab] transition-colors"
+                >
+                  <span>Edit</span>
+                </button>
                 <button
                   onClick={() => {
                     setSellModalHorseId(horse.id!);
