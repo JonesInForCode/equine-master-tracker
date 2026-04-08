@@ -19,7 +19,7 @@ export default function Layout() {
       <aside className={`fixed md:relative inset-y-0 left-0 w-64 border-r border-[#d3cbb8] flex flex-col p-4 space-y-4 bg-[#f4f1ea] z-50 transform transition-transform duration-300 ease-in-out ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
         <div className="mb-6 pb-4 border-b border-[#d3cbb8] flex justify-between items-center">
           <h1 className="text-2xl font-bold ink-text">Equine Ledger</h1>
-          <button className="md:hidden" onClick={() => setIsSidebarOpen(false)}>
+          <button className="md:hidden" onClick={() => setIsSidebarOpen(false)} aria-label="Close menu">
             <X className="w-6 h-6" />
           </button>
         </div>
@@ -57,7 +57,7 @@ export default function Layout() {
       <main className="flex-1 flex flex-col h-full overflow-hidden w-full">
         {/* Mobile Header */}
         <header className="md:hidden flex items-center p-4 border-b border-[#d3cbb8] bg-[#f4f1ea]">
-          <button onClick={() => setIsSidebarOpen(true)} className="mr-4">
+          <button onClick={() => setIsSidebarOpen(true)} className="mr-4" aria-label="Open menu">
             <Menu className="w-6 h-6" />
           </button>
           <h1 className="text-xl font-bold ink-text">Equine Ledger</h1>
