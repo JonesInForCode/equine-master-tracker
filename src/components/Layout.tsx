@@ -1,5 +1,5 @@
 import { Link, Outlet } from 'react-router-dom';
-import { Book, Home, Landmark, Hammer, Settings as SettingsIcon, Menu, X } from 'lucide-react';
+import { Book, Home, Landmark, Hammer, ClipboardList, Settings as SettingsIcon, Menu, X } from 'lucide-react';
 import { useState } from 'react';
 
 export default function Layout() {
@@ -39,6 +39,10 @@ export default function Layout() {
           <Link to="/crafting" onClick={() => setIsSidebarOpen(false)} className="flex items-center space-x-3 p-2 rounded hover:bg-[#d3cbb8]/30 transition-colors">
             <Hammer className="w-5 h-5" />
             <span>Crafting</span>
+          </Link>
+          <Link to="/orders" onClick={() => setIsSidebarOpen(false)} className="flex items-center space-x-3 p-2 rounded hover:bg-[#d3cbb8]/30 transition-colors">
+            <ClipboardList className="w-5 h-5" />
+            <span>Orders</span>
           </Link>
         </nav>
         <div className="border-t border-[#d3cbb8] pt-4">

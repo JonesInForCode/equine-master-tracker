@@ -5,6 +5,7 @@ import BreedRegistry from './components/BreedRegistry';
 import HorseManager from './components/HorseManager';
 import SalesLedger from './components/SalesLedger';
 import CraftingModule from './components/CraftingModule';
+import Orders from './components/Orders';
 import Settings from './components/Settings';
 
 function App() {
@@ -16,6 +17,7 @@ function App() {
           <Route path="stable" element={<HorseManager />} />
           <Route path="sales" element={<SalesLedger />} />
           <Route path="crafting" element={<CraftingModule />} />
+          <Route path="orders" element={<Orders />} />
           <Route path="settings" element={<Settings />} />
         </Route>
       </Routes>
